@@ -13,7 +13,7 @@ network. Everything below is source-level and local-mock evidence.
 
 | Check | Local source/test | Live Privy + Base Sepolia runtime |
 |---|---|---|
-| All 9 checks (Checks 1–9) code-level evidence | PASS — source + 13 tests + typecheck + production build | NOT PERFORMED — no funded credentials supplied within the submission window |
+| All 9 checks (Checks 1–9) code-level evidence | PASS — source + 13 passing tests + typecheck | NOT PERFORMED — no funded credentials supplied within the submission window |
 | One-time `addSigners` (session signers) grant + scope | PASS — verified against installed `react-auth`/`node` d.ts; component/unit tests | NOT PERFORMED — requires a live Privy app + funded wallet |
 | Committed policy create/enforcement | PASS — policy unit-tested | NOT PERFORMED — run `npm run register-policy` once `.env` is filled |
 | Server token verification + Wallet API signing | PASS — mocked in tests | NOT PERFORMED — requires `PRIVY_AUTHORIZATION_KEY` + live app |
@@ -170,6 +170,44 @@ accounting.
   `WalletAssetChainNameInput`). Both the committed policy's `source.chain`
   condition and the job's `wallets().transfer(source.chain)` use
   `CONTRIBUTION_CHAIN=base_sepolia`, so they agree.
+
+## Deployment / Contract Addresses
+
+Network: Base Sepolia
+Chain ID: eip155:84532
+
+ContributionCircle contract:
+
+`Not deployed for this submission — committed contract reference only.`
+
+There is **no `ContributionCircle` contract** in this repository — the only
+Solidity contract is `contracts/TestToken.sol`. The pot is server-orchestrated
+to a plain recipient address (see "Testnet, token & pot decision (Phase 1)"
+above), so the acceptance criteria are enforced by the wallet policy and the
+job's member gate, not by an on-chain pot. Do **not** call the TestToken
+"ContributionCircle" — they are different things.
+
+What **is** deployed on Base Sepolia (verified against the live RPC for this
+README):
+
+- **Deployed contract:** TestToken ("devcon-ps3 test token", symbol `PS3`,
+  6 decimals) — `contracts/TestToken.sol`, deployed via `npm run deploy-token`.
+- **Address:** `0x330961de63fbdb8129bf422f4d725025230e77b6`
+- **Block explorer:**
+  `https://sepolia.basescan.org/address/0x330961de63fbdb8129bf422f4d725025230e77b6`
+- **Deployer address (verified on-chain as token `owner`):**
+  `0x6605Ef4c2A767c030f9ca161Eb384e3f0eB42393` — the same address used as
+  `POT_RECIPIENT_ADDRESS` (it is an EOA, not a contract; `eth_getCode` returns
+  empty).
+- **Deployment transaction hash:** not recorded in this repository.
+
+Important:
+- A **private key, seed phrase, Privy App Secret, authorization key**, or
+  **access token** is never included here or anywhere in this repository.
+- The deployed address above is the **contribution token**, i.e. the policy's
+  allowlisted **source asset** (`source.asset_address eq`). The policy's
+  allowlisted **destination** (`destination.address eq`) is
+  `POT_RECIPIENT_ADDRESS`, currently the EOA `0x6605Ef4c2A767c030f9ca161Eb384e3f0eB42393`.
 
 ## How it works
 
@@ -336,8 +374,13 @@ runtime claims above:
 | `RPC_URL` | RPC for the chain |
 | `CONTRIBUTION_CHAIN` | Chain string — `base_sepolia` (Base Sepolia) |
 | `CONTRIBUTION_CHAIN_ID` | `84532` |
-| `CONTRIBUTION_TOKEN_ADDRESS` | The test ERC-20 |
-| `POT_RECIPIENT_ADDRESS` | The pot recipient (server-orchestrated) |
+| `CONTRIBUTION_TOKEN_ADDRESS` | The deployed contribution token — TestToken (`PS3`, 6 decimals), live at `0x330961de63fbdb8129bf422f4d725025230e77b6` on Base Sepolia. This is the policy's allowlisted **source asset** (`source.asset_address eq`, `lib/policy/contribution-policy.ts:49-52`). |
+| `POT_RECIPIENT_ADDRESS` | The policy allowlisted **destination** (`destination.address eq`, `lib/policy/contribution-policy.ts:65-70`). Currently the EOA `0x6605Ef4c2A767c030f9ca161Eb384e3f0eB42393` (the token owner / server-orchestrated pot recipient). |
+
+> There is **no `CONTRIBUTION_CONTRACT_ADDRESS` variable** in this codebase — the
+> deployed contract is the contribution *token* (`CONTRIBUTION_TOKEN_ADDRESS`),
+> and the allowlisted *destination* is the plain recipient address
+> (`POT_RECIPIENT_ADDRESS`). The two roles must not be conflated.
 | `CONTRIBUTION_AMOUNT` | Weekly max, decimal token units (policy cap) |
 | `CONTRIBUTION_EXPIRY_DAYS` | How long each delegation lives |
 | `CRON_SECRET` | Bearer secret for the cron endpoint |
@@ -370,7 +413,7 @@ npm run trigger-weekly   # runs the job once, locally
 
 ## Phase 2 — live E2E run-later (needs real credentials)
 
-The build, typecheck and 13 unit/integration tests all pass now; the live
+The automated tests (13/13) and typecheck pass; the live
 chain path below requires the four missing secrets to be pasted into `.env`
 (`NEXT_PUBLIC_PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `PRIVY_AUTHORIZATION_KEY`,
 `DEPLOYER_KEY`). Run in this order once they are available:
@@ -395,12 +438,54 @@ chain path below requires the four missing secrets to be pasted into `.env`
    a deliberately-broken member mid-run does not block the others (Check 8,
    already covered by `tests/job-error-isolation.test.ts`).
 
+## Live Verification Status
+
+What was actually executed for this submission, versus what was not.
+
+**PASS (actually run):**
+
+- **Automated tests — 13/13** (`npm test`): policy, job idempotency,
+  job-error-isolation, and revoke test suites (4 files).
+- **Secret scan** — fresh scan at README writing time: no `.env` file is
+  tracked by git, no real `PRIVY_APP_SECRET`/authorization-key/private-key
+  values appear in any tracked file (only the placeholder `your_app_secret` in
+  `.env.example`; `0x`-hex values checked).
+- **Deployed contract verified against the live Base Sepolia RPC** — address
+  `0x330961de63fbdb8129bf422f4d725025230e77b6` returns non-empty bytecode and
+  reads back `name()="devcon-ps3 test token"`, `symbol()="PS3"`,
+  `decimals()=6`; `owner()=0x6605Ef4c2A767c030f9ca161Eb384e3f0eB42393`.
+
+**NOT performed / NOT live-verified (do not treat as true):**
+
+- **Real Privy delegated grant** — no live `addSigners` consent flow was run
+  against a funded user wallet (`SIGNER_ID` is not set in `.env`).
+- **Real policy creation through the Privy Wallet API** — `npm run
+  register-policy` has not been run against the live Privy API for this
+  submission.
+- **Real scheduled contribution** — the weekly job has never been triggered
+  against live wallets.
+- **Real on-chain contribution transaction** — no delegated transfer has ever
+  been broadcast from this repository.
+- **Real revoke against a live authorization** — `removeSigners` has never been
+  run against a live embedded wallet.
+
+**Production build (`npm run build`):** currently **fails** with a
+pre-existing Turbopack/lightningcss module-resolution error while processing
+`app/globals.css` — unrelated to the PS3 feature code and reproducible on a
+stash-clean tree; `npm run typecheck` passes clean.
+
 ## Challenge Completion
 
-All nine acceptance criteria are implemented, cited, and locally verified:
+All nine scored criteria are implemented and covered by automated tests. Live
+Privy/Wallet API execution and an on-chain contribution were not performed
+unless explicitly verified below.
+
+The nine checks map to exact source locations (see "Acceptance Criteria
+Mapping"); point values are the real assessment weights (5+16+11+10+7+10+7+6+8
+= 80):
 
 1. Join screen: plain-language explanation + grant call — **5 pts** — `components/JoinFlow.tsx:113-165,78`
-2. Policy restricts to the destination contract — **16 pts** — `lib/policy/contribution-policy.ts:65-70,79-84`
+2. Policy restricts to the destination address — **16 pts** — `lib/policy/contribution-policy.ts:65-70,79-84`
 3. Delegated transfers capped at the weekly amount — **11 pts** — `lib/policy/contribution-policy.ts:53-58`
 4. Delegation is time-bound (expiry) — **10 pts** — `lib/policy/contribution-policy.ts:71-76`
 5. Authorization key from env, used for server signing — **7 pts** — `lib/config.ts:35`; `lib/auth/privy-server.ts:27-30`
@@ -409,8 +494,8 @@ All nine acceptance criteria are implemented, cited, and locally verified:
 8. One member's failure does not abort the run — **6 pts** — `lib/jobs/weekly-contribution.ts:51-100`
 9. Test token contract + ABIs + env vars + UI — **8 pts** — `contracts/TestToken.sol:11-70`; `lib/policy/erc20-abi.ts:1-12`; `.env.example`
 
-Total: **80 / 80**.
+Total: **80 / 80** — code-level criteria; see [Live Verification Status](#live-verification-status) for what was actually executed.
 
 The automatic evaluator path needs no credentials; a live round is a documented
-operator step that requires funded testnet credentials and never claims to have
-been executed.
+operator step that requires funded testnet credentials and was **not** executed
+for this submission.
