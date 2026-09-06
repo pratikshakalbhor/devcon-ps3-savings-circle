@@ -15,7 +15,7 @@ network. Everything below is source-level and local-mock evidence.
 |---|---|---|
 | All 9 checks (Checks 1–9) code-level evidence | PASS — source + 13 passing tests + typecheck | NOT PERFORMED — no funded credentials supplied within the submission window |
 | One-time `addSigners` (session signers) grant + scope | PASS — verified against installed `react-auth`/`node` d.ts; component/unit tests | NOT PERFORMED — requires a live Privy app + funded wallet |
-| Committed policy create/enforcement | PASS — policy unit-tested | NOT PERFORMED — run `npm run register-policy` once `.env` is filled |
+| Committed policy create/enforcement | PASS — policy unit-tested + live policy exists (ID `fb07g0swqo32graaxx7dwk58`, rules match the committed policy, verified via live Privy API) | NOT PERFORMED — policy is created in Privy's store, but never attached to a member wallet via a live grant |
 | Server token verification + Wallet API signing | PASS — mocked in tests | NOT PERFORMED — requires `PRIVY_AUTHORIZATION_KEY` + live app |
 | Weekly contribution broadcast | PASS — delegated transfer path tested with a fake client | NOT PERFORMED — nothing was ever broadcast from this repository |
 
@@ -454,14 +454,24 @@ What was actually executed for this submission, versus what was not.
   `0x330961de63fbdb8129bf422f4d725025230e77b6` returns non-empty bytecode and
   reads back `name()="devcon-ps3 test token"`, `symbol()="PS3"`,
   `decimals()=6`; `owner()=0x6605Ef4c2A767c030f9ca161Eb384e3f0eB42393`.
+- **Real policy creation through the Privy Wallet API — LIVE, PASS** with the
+  exact committed policy: policy **`fb07g0swqo32graaxx7dwk58`** ("Weekly
+  Contribution Policy", ethereum, v1.0) is verified present via live
+  `GET /v1/policies/{id}` (Privy API) for this README. Its rules exactly match
+  the current `buildContributionPolicy` (`lib/policy/contribution-policy.ts`):
+  `source.asset_address eq 0x330961de63fbdb8129bf422f4d725025230e77b6`,
+  `source.amount lte 10.0`, `source.chain eq base_sepolia`,
+  `destination.address eq 0x6605ef4c…42393`, `current_unix_timestamp lte` the
+  grant-time expiry, plus the `*`-method DENY catch-all. Registered this
+  session via the current `useSigners`-era build (name and rule shape match
+  the committed code — not a pre-migration artifact).
 
 **NOT performed / NOT live-verified (do not treat as true):**
 
 - **Real Privy delegated grant** — no live `addSigners` consent flow was run
-  against a funded user wallet (`SIGNER_ID` is not set in `.env`).
-- **Real policy creation through the Privy Wallet API** — `npm run
-  register-policy` has not been run against the live Privy API for this
-  submission.
+  against a funded user wallet (`SIGNER_ID` is not set in `.env`; the committed
+  policy above exists in Privy's store, but was not yet attached to a member
+  wallet through a live grant).
 - **Real scheduled contribution** — the weekly job has never been triggered
   against live wallets.
 - **Real on-chain contribution transaction** — no delegated transfer has ever
