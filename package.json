@@ -1,0 +1,37 @@
+{
+  "name": "devcon-ps3",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "register-policy": "tsx scripts/register-policy.ts",
+    "trigger-weekly": "tsx scripts/trigger-weekly-job.ts",
+    "deploy-token": "tsx scripts/deploy-token.ts",
+    "mint-token": "tsx scripts/mint-token.ts"
+  },
+  "dependencies": {
+    "@privy-io/node": "^0.34.0",
+    "@privy-io/react-auth": "^3.40.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "next": "^16.3.4",
+    "postcss": "^8.5.28",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwindcss": "^4.3.3",
+    "viem": "^2.56.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "dotenv": "^16.4.0",
+    "solc": "^0.8.36",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.0"
+  }
+}

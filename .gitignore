@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+data/
+.dev/
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.log
+contracts/out/
+contracts/cache/
+.DS_Store
